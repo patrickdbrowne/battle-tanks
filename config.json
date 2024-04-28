@@ -9,7 +9,7 @@
     {
       "layout": "level2.txt",
       "background": "desert.png",
-      "foreground-colour": "234,221,181",
+      "foreground-colour": "234,221,181"
     },
     {
       "layout": "level3.txt",
