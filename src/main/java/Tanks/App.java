@@ -15,6 +15,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.*;
 
+
 public class App extends PApplet {
 
     public static final int CELLSIZE = 32; //8;
@@ -42,7 +43,13 @@ public class App extends PApplet {
     public static JSONArray all_levels;
     // below is not HashMap<String, String> type
     public JSONObject current_level_data;
-    public boolean runonce = true;
+    // public boolean runonce = true;
+
+    // keep track of each tank
+    public static ArrayList<Player> all_players = new ArrayList<Player>();
+
+    public static char[] valid_players = {'A','B','C','D','E','F','G','H','I','0','1','2','3','4','5','6','7','8','9'};
+    public static JSONObject colours;
 	
 	// Feel free to add any additional methods or attributes you want. Please put classes in different files.
 
@@ -64,6 +71,8 @@ public class App extends PApplet {
 	@Override
     public void setup() {
         frameRate(FPS);
+
+
 		//See PApplet javadoc:
 		//loadJSONObject(configPath)
 		//loadImage(this.getClass().getResource(filename).getPath().toLowerCase(Locale.ROOT).replace("%20", " "));
@@ -72,7 +81,7 @@ public class App extends PApplet {
         //current_level: the details of one element in the array all_levels (one level)
         //layout, background etc. the specific detail in the current_level starting at level 1
 
-        json_data = loadJSONObject("config.json");
+        json_data = loadJSONObject("config.json");        
         all_levels = json_data.getJSONArray("levels");
         current_level_data = all_levels.getJSONObject(0);
         
@@ -87,12 +96,18 @@ public class App extends PApplet {
         PImage background_image = loadImage("build/resources/main/Tanks/" + background);
         image(background_image, 0, 0);
 
-
-
+        // colour map
+        colours = json_data.getJSONObject("player_colours");
+        // System.out.println(colours.getString("A"));
 
         // Setting up from blocky level the first time
         DrawTerrain level = new DrawTerrain(layout, background, foreground_colour, trees);
         level.drawForeground(this);
+
+
+        // for (Player player : all_players) {
+        //     System.out.println(player.name);
+        // }
 
 
         // System.out.println(current_level_data);

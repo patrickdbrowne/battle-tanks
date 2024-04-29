@@ -11,28 +11,33 @@ import processing.core.PImage;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+import jogamp.nativewindow.windows.PIXELFORMATDESCRIPTOR;
+
 public class DrawTerrain {
     // public static File terrain_data;
-    private String layout_path; 
-    private String background_path;
-    private String foreground_colour;
-    private String trees_path;
-    private static final int PIXEL_WIDTH = 32;
-    private static final int PIXEL_HEIGHT = 32;
-    private static int terrain_width = App.WIDTH;
+    public String layout_path; 
+    public String background_path;
+    public String foreground_colour;
+    public String trees_path;
+    public static final int PIXEL_WIDTH = 32;
+    public static final int PIXEL_HEIGHT = 32;
+    public static int terrain_width = App.WIDTH;
 
     // Each index corresponds to x-coordinate, and the y-coordinate is the value in that space.
     // E.g., [0,0,15,20,20,20], at index=2, x=2 and y=15 (in pixels)
-    private int[] terrain_av0;
-    private int[] terrain_av1;
-    private int[] terrain_av2;
-    private boolean yes = true;
+    public int[] terrain_av0;
+    public int[] terrain_av1;
+    public static int[] terrain_av2;
+    // private boolean yes = true;
 
     // Data Structure //
     // Each 2 spaced list represents x and y-coordinate of tree on map
-    private int[][] tree_locations;
+    public int[][] tree_locations;
     // keeps track of how many position have been filled for calculation purposes
-    private int numberOfTrees = 0;
+    public int numberOfTrees = 0;
+
+    //know whether to setup players in list
+    public boolean setup_player_arr = false;
 
 
 
@@ -42,6 +47,16 @@ public class DrawTerrain {
         this.foreground_colour = foreground_colour;
         this.trees_path = trees_path;
 
+    }
+
+    public boolean checkArrContains(char[] arr, char target) {
+        boolean contains = false;
+        for (char i : arr) {
+            if (i == target)
+                contains = true;
+        }
+        return contains;
+        
     }
 
     public char[][] readLevel() {
@@ -125,6 +140,13 @@ public class DrawTerrain {
         terrain_av1 = new int[App.WIDTH + PIXEL_WIDTH];
         terrain_av2 = new int[App.WIDTH + PIXEL_WIDTH];
 
+
+        // know whether to setup player list or not
+        if (App.all_players.size() == 0) {
+            // App.all_players = 
+            setup_player_arr = true;
+            // System.out.println("womp");
+        }
         // SCANNING ITEMS LOOPS
         for (int col=0; col<28; col++) {
             // System.out.println(terrain_av0.length);
@@ -157,7 +179,20 @@ public class DrawTerrain {
 
                         tree_locations[numberOfTrees][0] = x_tree; 
                         numberOfTrees++;
+                    }//!(String.valueOf(drawing_data[row][col]).isEmpty())
+                } else if (checkArrContains(App.valid_players, drawing_data[row][col])) {
+                    // must be player
+                    if (setup_player_arr) {
+                        char player_name = drawing_data[row][col];
+                        // find colour of this player
+
+                        App.all_players.add(new Player(col * PIXEL_WIDTH, row * PIXEL_HEIGHT, player_name, App.colours.getString(String.valueOf(player_name))));
+                    } else if (!setup_player_arr) {
+                        System.out.println("the show must go on.");
                     }
+
+                    // setupPlayers();
+                    
                 }
             }
         }
@@ -218,6 +253,13 @@ public class DrawTerrain {
             }
         }
 
+        // Insert the tanks //
+
+        for (Player player : App.all_players) {
+            player.drawTank(app);
+        }
+
+        setup_player_arr = false;
         return;        
         // draws the actual ground
 
