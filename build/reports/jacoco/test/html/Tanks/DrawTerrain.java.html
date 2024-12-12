@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DrawTerrain.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">battle-tanks</a> &gt; <a href="index.source.html" class="el_package">Tanks</a> &gt; <span class="el_source">DrawTerrain.java</span></div><h1>DrawTerrain.java</h1><pre class="source lang-java linenums">package Tanks;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Scanner;
+
+import processing.core.PApplet;
+import processing.core.PFont;
+import processing.core.PImage;
+
+import java.util.concurrent.ThreadLocalRandom;
+
+import jogamp.nativewindow.windows.PIXELFORMATDESCRIPTOR;
+
+public class DrawTerrain {
+<span class="nc" id="L18">    public int[][] tree_locations = new int[27][2];</span>
+
+    public static int[] colourA;
+    public static int[] colourB;
+    public static int[] colourC;
+    public static int[] colourD;
+<span class="nc" id="L24">    public static boolean first_pass = true;</span>
+
+    public String layout_path; 
+    public String background_path;
+    public String foreground_colour;
+    public String trees_path;
+    public static final int PIXEL_WIDTH = 32;
+    public static final int PIXEL_HEIGHT = 32;
+<span class="nc" id="L32">    public static int terrain_width = App.WIDTH;</span>
+<span class="nc" id="L33">    public int top_height = 24;</span>
+<span class="nc" id="L34">    public static int wind = ThreadLocalRandom.current().nextInt(-35, 35+1);</span>
+
+    // Each index corresponds to x-coordinate, and the y-coordinate is the value in that space.
+    // E.g., [0,0,15,20,20,20], at index=2, x=2 and y=15 (in pixels)
+    public int[] terrain_av0;
+    public int[] terrain_av1;
+    public static int[] terrain_av2;
+    // private boolean yes = true;
+
+    // keeps track of how many position have been filled for calculation purposes
+<span class="nc" id="L44">    public int numberOfTrees = 0;</span>
+
+    //know whether to setup players in list
+<span class="nc" id="L47">    public boolean setup_player_arr = false;</span>
+
+
+
+<span class="nc" id="L51">    public DrawTerrain(String layout_path, String background_path, String foreground_colour, String trees_path) {</span>
+<span class="nc" id="L52">        this.layout_path = layout_path;</span>
+<span class="nc" id="L53">        this.background_path = background_path;</span>
+<span class="nc" id="L54">        this.foreground_colour = foreground_colour;</span>
+<span class="nc" id="L55">        this.trees_path = trees_path;</span>
+<span class="nc" id="L56">    }</span>
+
+    public boolean checkArrContains(char[] arr, char target) {
+<span class="nc" id="L59">        boolean contains = false;</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        for (char i : arr) {</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">            if (i == target)</span>
+<span class="nc" id="L62">                contains = true;</span>
+        }
+<span class="nc" id="L64">        return contains;</span>
+        
+    }
+
+    public char[][] readLevel() {
+        // maps positions of items from text file to array, which is later used
+<span class="nc" id="L70">        char[][] drawing_data = new char[20][28];</span>
+        
+        // Read terrain
+        try {
+<span class="nc" id="L74">            BufferedReader reader = new BufferedReader(new FileReader(this.layout_path));</span>
+            String line;
+<span class="nc" id="L76">            int row = 0;</span>
+
+<span class="nc bnc" id="L78" title="All 4 branches missed.">            while ((line = reader.readLine()) != null &amp;&amp; row &lt; 20) {</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">                for (int col = 0; col &lt; Math.min(28, line.length()); col++) {</span>
+<span class="nc" id="L80">                    drawing_data[row][col] = line.charAt(col);</span>
+                }
+<span class="nc" id="L82">                row++;</span>
+            }
+
+<span class="nc" id="L85">            reader.close();</span>
+<span class="nc" id="L86">        } catch (IOException e) {</span>
+<span class="nc" id="L87">            e.printStackTrace();</span>
+<span class="nc" id="L88">        }</span>
+        
+<span class="nc" id="L90">        return drawing_data;</span>
+    }
+
+    public static float average32(int start, int end, int[] arr) {
+        // start is inclusive, end is exclusive
+<span class="nc" id="L95">        float num = 0;</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        for (int i=start; i&lt;end; i++){</span>
+<span class="nc" id="L97">            num += (float)arr[i];</span>
+        }
+<span class="nc" id="L99">        return num/32;</span>
+    }
+
+    public static int[] unwrapRGB(String rgbString) {
+        // Turns &quot;255,0,0&quot; to [255, 0, 0]
+<span class="nc" id="L104">        String[] parts = rgbString.split(&quot;,&quot;);</span>
+<span class="nc" id="L105">        int[] rgb = new int[parts.length];</span>
+
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        for (int i = 0; i &lt; parts.length; i++) {</span>
+<span class="nc" id="L108">            rgb[i] = Integer.parseInt(parts[i].trim()); // trim to remove any extra spaces</span>
+        }
+
+<span class="nc" id="L111">        return rgb;</span>
+    }
+    public void drawForeground(App app) {
+
+<span class="nc" id="L115">        char[][] drawing_data = readLevel();</span>
+        
+        // Draw it by pixel by averaging it two times
+<span class="nc" id="L118">        terrain_av0 = new int[App.WIDTH + PIXEL_WIDTH];</span>
+<span class="nc" id="L119">        terrain_av1 = new int[App.WIDTH + PIXEL_WIDTH];</span>
+<span class="nc" id="L120">        terrain_av2 = new int[App.WIDTH + PIXEL_WIDTH];</span>
+
+
+        // know whether to setup player list or not
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (app.all_players.size() == 0) {</span>
+<span class="nc" id="L125">            setup_player_arr = true;</span>
+        }
+        // SCANNING ITEMS LOOPS
+<span class="nc bnc" id="L128" title="All 2 branches missed.">        for (int col=0; col&lt;28; col++) {</span>
+            // rintln(terrain_av0.length);
+<span class="nc bnc" id="L130" title="All 2 branches missed.">            for (int row=0; row&lt;20; row++) {</span>
+
+                // Draw the units of land at the top
+<span class="nc bnc" id="L133" title="All 2 branches missed.">                if (drawing_data[row][col] == 'X') {</span>
+
+                    // record pixels in list to average later.
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                    for (int i=0; i&lt;PIXEL_WIDTH; i++) {</span>
+                        // Record the placement of 32 values (pixels) in terrain_av0
+
+                        // This shifts the y-position according to its correct column
+<span class="nc" id="L140">                        int index = i + (col*PIXEL_WIDTH);</span>
+
+                        // calculation to find pixel height based on row increasing top to down screen
+<span class="nc" id="L143">                        terrain_av0[index] = row * PIXEL_HEIGHT;</span>
+                    }
+<span class="nc bnc" id="L145" title="All 2 branches missed.">                } else if (drawing_data[row][col] == 'T') {</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">                    if (this.trees_path != null) {</span>
+                        // if null, just ignore the T
+
+                        // born in the centre of the column (32/2=16)
+<span class="nc" id="L150">                        int x_tree = col*PIXEL_WIDTH;</span>
+                        // int y_tree = row * PIXEL_HEIGHT;
+
+<span class="nc" id="L153">                        tree_locations[numberOfTrees][0] = x_tree; </span>
+<span class="nc" id="L154">                        numberOfTrees++;</span>
+<span class="nc" id="L155">                    }</span>
+
+<span class="nc bnc" id="L157" title="All 2 branches missed.">                } else if (checkArrContains(App.valid_players, drawing_data[row][col])) {</span>
+                    // must be player
+<span class="nc bnc" id="L159" title="All 2 branches missed.">                    if (setup_player_arr) {</span>
+<span class="nc" id="L160">                        char player_name = drawing_data[row][col];</span>
+                        // find colour of this player
+
+<span class="nc" id="L163">                        app.all_players.add(new Player(col * PIXEL_WIDTH, row * PIXEL_HEIGHT, player_name, App.colours.getString(String.valueOf(player_name))));</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">                    } else if (!setup_player_arr) {}                    </span>
+                }
+            }
+        }
+
+        // Average values one time //
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        for (int pixel=0; pixel&lt;terrain_av1.length - PIXEL_WIDTH; pixel++) {</span>
+<span class="nc" id="L171">            terrain_av1[pixel] = (int)average32(pixel, pixel+PIXEL_WIDTH, terrain_av0);</span>
+        }
+        // for simplicity, match the last portion of pixels not displayed
+<span class="nc bnc" id="L174" title="All 2 branches missed.">        for (int pixel=terrain_av1.length - PIXEL_WIDTH; pixel&lt;terrain_av1.length; pixel++) {</span>
+<span class="nc" id="L175">            terrain_av1[pixel] = terrain_av0[pixel];</span>
+        }
+
+        // Average values a second time //
+<span class="nc bnc" id="L179" title="All 2 branches missed.">        for (int pixel=0; pixel&lt;terrain_av2.length - PIXEL_WIDTH; pixel++) {</span>
+<span class="nc" id="L180">            terrain_av2[pixel] = (int)average32(pixel, pixel+PIXEL_WIDTH, terrain_av1);</span>
+        }
+<span class="nc bnc" id="L182" title="All 2 branches missed.">        for (int pixel=terrain_av2.length - PIXEL_WIDTH; pixel&lt;terrain_av2.length; pixel++) {</span>
+<span class="nc" id="L183">            terrain_av2[pixel] = terrain_av1[pixel];</span>
+        }
+
+<span class="nc" id="L186">        continueDrawing(app);</span>
+<span class="nc" id="L187">        setup_player_arr = false;</span>
+
+        
+<span class="nc" id="L190">        return;        </span>
+
+    }
+
+    public void continueDrawing(App app) {
+        // terrain_av2 cannot be recalculated each time from the file. allow explosions etc.
+
+        // Draw the terrain
+<span class="nc" id="L198">        int[] rgb_list = unwrapRGB(foreground_colour);</span>
+<span class="nc" id="L199">        int R = rgb_list[0];</span>
+<span class="nc" id="L200">        int G = rgb_list[1];</span>
+<span class="nc" id="L201">        int B = rgb_list[2];</span>
+<span class="nc" id="L202">        app.stroke(R, G, B);</span>
+<span class="nc" id="L203">        app.fill(R, G, B);</span>
+<span class="nc" id="L204">        app.beginShape();</span>
+        // start colouring from the bottom left, and end bottom right
+<span class="nc" id="L206">        app.vertex(0, App.HEIGHT);</span>
+<span class="nc bnc" id="L207" title="All 2 branches missed.">        for (int i=0; i &lt; terrain_av2.length; i++) {</span>
+<span class="nc" id="L208">            app.vertex(i, terrain_av2[i]);</span>
+        }
+<span class="nc" id="L210">        app.vertex(App.WIDTH, App.HEIGHT);</span>
+<span class="nc" id="L211">        app.endShape();</span>
+
+        // Insert the tanks //
+<span class="nc bnc" id="L214" title="All 2 branches missed.">        for (Player player : app.all_players) {</span>
+<span class="nc" id="L215">            player.drawTank(app);</span>
+<span class="nc" id="L216">        }</span>
+
+        // assign current player //
+<span class="nc" id="L219">        app.currentPlayer = app.all_players.get(app.currentIndexPlayer);</span>
+
+
+
+
+        //////// Insert the logos/symbols on the screen /////////
+        // Player turn //
+<span class="nc" id="L226">        app.fill(0,0,0);</span>
+        // params are content, x-coord of text, y-coord
+<span class="nc" id="L228">        String display_player = &quot;Player &quot; + app.currentPlayer.name + &quot;'s turn&quot;;</span>
+<span class="nc" id="L229">        app.text(display_player, 20, top_height);</span>
+
+        // fuel //
+<span class="nc" id="L232">        PImage fuel = app.loadImage(&quot;build/resources/main/Tanks/fuel.png&quot;);</span>
+<span class="nc" id="L233">        int fuel_logo_size = 25;</span>
+<span class="nc" id="L234">        int fuel_x = 150;</span>
+<span class="nc" id="L235">        app.image(fuel, fuel_x, 5, fuel_logo_size, fuel_logo_size);</span>
+<span class="nc" id="L236">        app.text(Integer.toString(app.currentPlayer.fuel), fuel_x + 25, fuel_logo_size);</span>
+
+        // health //
+<span class="nc" id="L239">        int x_health = 380;</span>
+<span class="nc" id="L240">        String display_health = &quot;Health:&quot;;</span>
+<span class="nc" id="L241">        app.text(display_health, x_health, top_height);</span>
+
+<span class="nc" id="L243">        int[] colour = unwrapRGB(app.currentPlayer.colour);</span>
+
+<span class="nc" id="L245">        app.fill(colour[0], colour[1], colour[2]);</span>
+<span class="nc" id="L246">        app.stroke(0, 0, 0);</span>
+        // make sure all constants in expression are of same type, cast if needed
+<span class="nc" id="L248">        int current_h = (int)((8.0/5.0) * (double)app.currentPlayer.health);</span>
+<span class="nc" id="L249">        app.rect(x_health + 55, 8, current_h, 20);</span>
+
+        // check power is below new health
+<span class="nc bnc" id="L252" title="All 2 branches missed.">        if (app.currentPlayer.health &lt; app.currentPlayer.power) {</span>
+<span class="nc" id="L253">            app.currentPlayer.power = app.currentPlayer.health;</span>
+        }
+
+        // wind
+<span class="nc" id="L257">        int wsize = 50;</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">        if (wind &gt;= 0) {</span>
+<span class="nc" id="L259">            PImage wind_img = app.loadImage(&quot;build/resources/main/Tanks/wind.png&quot;);</span>
+<span class="nc" id="L260">            app.image(wind_img, App.WIDTH - 2 * wsize, 5, wsize, wsize);</span>
+        }
+<span class="nc bnc" id="L262" title="All 2 branches missed.">        if (wind &lt; 0) {</span>
+<span class="nc" id="L263">            PImage wind_img = app.loadImage(&quot;build/resources/main/Tanks/wind-1.png&quot;);</span>
+<span class="nc" id="L264">            app.image(wind_img, App.WIDTH - 2 * wsize, 5, wsize, wsize);</span>
+        }
+
+<span class="nc" id="L267">        String display_wind = String.valueOf(Math.abs(wind));</span>
+
+<span class="nc" id="L269">        app.stroke(0, 0, 0);</span>
+<span class="nc" id="L270">        app.fill(0, 0, 0);</span>
+<span class="nc" id="L271">        app.text(display_wind, App.WIDTH - wsize + 10, top_height * 3/2);</span>
+
+<span class="nc" id="L273">        app.stroke(0, 0, 0);</span>
+<span class="nc" id="L274">        app.fill(0, 0, 0);</span>
+<span class="nc" id="L275">        String health_num = Integer.toString(app.currentPlayer.health);</span>
+<span class="nc" id="L276">        app.text(health_num, x_health + 55 + 160 + 8, top_height);</span>
+
+
+
+        // use floating point literal constants i.e., 5.0/8.0 not 5/8 --&gt; 0. something and the something is removed because it is declared as an 'int'
+<span class="nc" id="L281">        double line_x = (8.0 / 5.0) * (app.currentPlayer.power);</span>
+
+        // grey box
+<span class="nc" id="L284">        app.stroke(211, 211, 211);</span>
+<span class="nc" id="L285">        app.fill(211, 211, 211);</span>
+<span class="nc" id="L286">        app.rect(x_health + 55, 8, (int)line_x, 20);</span>
+
+        // grey box
+<span class="nc" id="L289">        int diff = 3;</span>
+<span class="nc" id="L290">        app.stroke(colour[0], colour[1], colour[2]);</span>
+<span class="nc" id="L291">        app.fill(colour[0], colour[1], colour[2]);</span>
+<span class="nc" id="L292">        app.rect(x_health + 55 + diff, 8 + diff, (int)line_x - 2*diff, 20 - 2*diff);</span>
+
+<span class="nc" id="L294">        app.stroke(255, 0, 0);</span>
+<span class="nc" id="L295">        app.fill(255, 0, 0);</span>
+<span class="nc" id="L296">        app.line((int)line_x + x_health + 55, 5, (int)line_x + x_health + 55, 31);</span>
+
+
+        // Power
+<span class="nc" id="L300">        app.fill(0, 0, 0);</span>
+<span class="nc" id="L301">        String display_power = &quot;Power: &quot; + app.currentPlayer.power;</span>
+<span class="nc" id="L302">        app.text(display_power, x_health, 2 * top_height);</span>
+
+
+        // scoreboard //
+<span class="nc" id="L306">        app.stroke(0, 0, 0);</span>
+
+<span class="nc" id="L308">        app.strokeWeight(6);</span>
+<span class="nc" id="L309">        app.noFill();</span>
+<span class="nc" id="L310">        app.rect(App.WIDTH - 3 * wsize, 5 + wsize, 135, 112);</span>
+<span class="nc" id="L311">        app.fill(0, 0, 0);</span>
+<span class="nc" id="L312">        app.text(&quot;Scores&quot;, App.WIDTH - 3 * wsize + 5, 5 + wsize + 20);</span>
+<span class="nc" id="L313">        app.line(App.WIDTH - 3 * wsize, 5 + wsize + 25, App.WIDTH - 3 * wsize + 135, 5 + wsize + 25);</span>
+        // 25 y - coords difference
+
+<span class="nc bnc" id="L316" title="All 2 branches missed.">        if (first_pass) {</span>
+<span class="nc" id="L317">            DrawTerrain.colourA = DrawTerrain.unwrapRGB(app.all_players.get(0).colour);</span>
+<span class="nc" id="L318">            DrawTerrain.colourB = DrawTerrain.unwrapRGB(app.all_players.get(1).colour);</span>
+<span class="nc" id="L319">            DrawTerrain.colourC = DrawTerrain.unwrapRGB(app.all_players.get(2).colour);</span>
+<span class="nc" id="L320">            DrawTerrain.colourD = DrawTerrain.unwrapRGB(app.all_players.get(3).colour);</span>
+
+<span class="nc" id="L322">            first_pass = false;</span>
+        }
+        
+<span class="nc" id="L325">        app.fill(colourA[0], colourA[1], colourA[2]);</span>
+<span class="nc" id="L326">        app.text(&quot;Player A&quot;, App.WIDTH - 3 * wsize + 5, 5 + wsize + 45);</span>
+
+<span class="nc" id="L328">        app.fill(colourB[0], colourB[1], colourB[2]);</span>
+<span class="nc" id="L329">        app.text(&quot;Player B&quot;, App.WIDTH - 3 * wsize + 5, 5 + wsize + 65);</span>
+
+<span class="nc" id="L331">        app.fill(colourC[0], colourC[1], colourC[2]);</span>
+<span class="nc" id="L332">        app.text(&quot;Player C&quot;, App.WIDTH - 3 * wsize + 5, 5 + wsize + 85);</span>
+
+<span class="nc" id="L334">        app.fill(colourD[0], colourD[1], colourD[2]);</span>
+<span class="nc" id="L335">        app.text(&quot;Player D&quot;, App.WIDTH - 3 * wsize + 5, 5 + wsize + 105);</span>
+
+        // player scores
+<span class="nc" id="L338">        app.fill(0, 0, 0);</span>
+<span class="nc" id="L339">        app.text(App.A_score, App.WIDTH - 3 * wsize + 100, 5 + wsize + 45);</span>
+<span class="nc" id="L340">        app.text(App.B_score, App.WIDTH - 3 * wsize + 100, 5 + wsize + 65);</span>
+<span class="nc" id="L341">        app.text(App.C_score, App.WIDTH - 3 * wsize + 100, 5 + wsize + 85);</span>
+<span class="nc" id="L342">        app.text(App.D_score, App.WIDTH - 3 * wsize + 100, 5 + wsize + 105);</span>
+
+
+<span class="nc" id="L345">        app.strokeWeight(1);</span>
+
+        // Insert the trees //
+<span class="nc bnc" id="L348" title="All 2 branches missed.">        if (this.trees_path != null) {</span>
+<span class="nc" id="L349">            PImage tree = app.loadImage(&quot;build/resources/main/Tanks/&quot; + this.trees_path);</span>
+<span class="nc bnc" id="L350" title="All 2 branches missed.">            for (int treeCount=0; treeCount&lt;=numberOfTrees; treeCount++) {</span>
+                // index 0 --&gt; x-coordinate
+                // index 1 --&gt; calculate so it sits on the slope rather than floating
+<span class="nc" id="L353">                int x_tree_dimensions = tree_locations[treeCount][0];</span>
+                // the middle touches the slope and not left edge
+<span class="nc" id="L355">                int y_tree_dimensions = terrain_av2[x_tree_dimensions];</span>
+<span class="nc" id="L356">                app.image(tree, x_tree_dimensions- PIXEL_WIDTH/2, y_tree_dimensions - PIXEL_HEIGHT, PIXEL_WIDTH, PIXEL_HEIGHT);</span>
+            }
+<span class="nc" id="L358">            numberOfTrees = 0;</span>
+        }
+<span class="nc" id="L360">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

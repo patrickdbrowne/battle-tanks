@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Projectile.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">battle-tanks</a> &gt; <a href="index.source.html" class="el_package">Tanks</a> &gt; <span class="el_source">Projectile.java</span></div><h1>Projectile.java</h1><pre class="source lang-java linenums">package Tanks;
+
+public class Projectile {
+    
+    public int x;
+    public int y;
+    public int power;
+    public Player shooter;
+    // public float angle;
+    public App app;
+<span class="nc" id="L11">    public double gravity = 3.6;</span>
+    public double x_speed;
+    public double y_speed;
+<span class="nc" id="L14">    public boolean initial_launch = true;</span>
+    public double constant;
+
+    public int x_initial;
+    public int y_initial;
+    public double magnitude;
+    public double x_velocity;
+    public double y_velocity;
+    public double angle;
+    public int[] colour;
+
+
+<span class="nc" id="L26">    public Projectile(App app, Player shooter) {</span>
+<span class="nc" id="L27">        this.shooter = shooter;</span>
+<span class="nc" id="L28">        this.x_initial = shooter.x_pos;</span>
+<span class="nc" id="L29">        this.y_initial = shooter.y_pos;</span>
+
+        // minimum of 1, maximum of 9
+<span class="nc" id="L32">        this.magnitude = (int)((8*shooter.power)/100 + 1);</span>
+        // angle to the positive x-axis. refer to: http://btk.tillnagel.com/tutorials/rotation-translation-matrix.html
+<span class="nc" id="L34">        this.angle = ((3*Math.PI)/2) - shooter.turret_angle;</span>
+<span class="nc" id="L35">        this.x_velocity = this.magnitude * Math.cos(this.angle);</span>
+<span class="nc" id="L36">        this.y_velocity = -(this.magnitude * Math.sin(this.angle));</span>
+<span class="nc" id="L37">        this.colour = DrawTerrain.unwrapRGB(shooter.colour);</span>
+
+<span class="nc" id="L39">    }</span>
+
+    public int[] calculatePositions(double t) {
+        // assumptions: 
+        // - angle is to the positive x-axis
+        // - velocity is the magnitude (the hypotenuse) in pixels/frame
+        // - t is in frames (not seconds), and so are the other units)
+        
+<span class="nc" id="L47">        int[] xy_positions = new int[2];</span>
+<span class="nc" id="L48">        double gravity = -3.6/App.FPS;</span>
+
+<span class="nc" id="L50">        xy_positions[0] = (int)(this.x_initial + this.x_velocity * t + (int)(0.03 * ((double)DrawTerrain.wind/App.FPS) * (double)Math.pow(t, 2)));</span>
+<span class="nc" id="L51">        xy_positions[1] = (int)(this.y_initial + this.y_velocity * t - (0.5 * gravity * (Math.pow(t, 2))));</span>
+
+<span class="nc" id="L53">        return xy_positions;</span>
+    }
+
+    // validate + calculate the next move. If not valid, explode and end
+    public static boolean toExplode(int x, int y) {
+        // checks if projectile above ground and within screen edges. false means keep moving, true means explode the ball
+        // ignore if above screen
+        boolean toExplode;
+        boolean inside;
+        boolean projectile_above;
+
+<span class="nc bnc" id="L64" title="All 6 branches missed.">        inside = (x + App.radius &lt; App.WIDTH) &amp;&amp; (x - App.radius &gt; 0) &amp;&amp; (y - App.radius &lt; App.HEIGHT);</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        if (inside) { </span>
+            // consider when centre is out of screen, but radius is in screen -x coordinate
+            
+            // centre is compared by default
+<span class="nc bnc" id="L69" title="All 2 branches missed.">            projectile_above = y &lt;= DrawTerrain.terrain_av2[x];</span>
+        } else {
+<span class="nc" id="L71">            projectile_above = false;</span>
+        }
+
+            
+<span class="nc bnc" id="L75" title="All 4 branches missed.">        if (projectile_above &amp;&amp; inside) {</span>
+<span class="nc" id="L76">            toExplode = false;</span>
+
+        } else {
+<span class="nc" id="L79">            toExplode = true;</span>
+        }
+<span class="nc" id="L81">            return toExplode;</span>
+        }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

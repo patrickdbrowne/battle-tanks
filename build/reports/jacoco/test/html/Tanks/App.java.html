@@ -1,0 +1,647 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>App.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">battle-tanks</a> &gt; <a href="index.source.html" class="el_package">Tanks</a> &gt; <span class="el_source">App.java</span></div><h1>App.java</h1><pre class="source lang-java linenums">// r -20 points for +20 hp
+// r to restart at the end
+// f -10 points for +200 fuel
+// sound effect wilhelm scream and vine boom ofc
+// power - w/s
+// arrows for turret and movement
+
+package Tanks;
+
+import org.checkerframework.checker.units.qual.A;
+import processing.core.PApplet;
+import processing.core.PFont;
+import processing.core.PImage;
+import processing.data.JSONArray;
+import processing.data.JSONObject;
+import processing.event.KeyEvent;
+import processing.event.MouseEvent;
+
+import ddf.minim.*;
+
+
+import java.applet.*; 
+import java.net.*;
+
+import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+
+import java.io.*;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
+
+public class App extends PApplet {
+
+    public Minim minim;
+    public AudioPlayer player;
+    public Minim minim2;
+    public AudioPlayer player2;
+<span class="fc" id="L41">    public double t_ani = 0;</span>
+<span class="fc" id="L42">    public static boolean animation = false;</span>
+    public static int current_index;
+    public static int A_score;
+    public static int B_score;
+    public static int C_score;
+    public static int D_score;
+<span class="fc" id="L48">    public static boolean A_exists = true;</span>
+<span class="fc" id="L49">    public static boolean B_exists = true;</span>
+<span class="fc" id="L50">    public static boolean C_exists = true;</span>
+<span class="fc" id="L51">    public static boolean D_exists = true;</span>
+<span class="fc" id="L52">    public static boolean endgame = false;</span>
+
+
+
+    public Player shooter;
+<span class="fc" id="L57">    public int remove_at_index = -10;</span>
+    public DrawTerrain level;
+    public static PFont f;
+    public static PImage background_image;
+<span class="fc" id="L61">    public static int test_x = 1;</span>
+<span class="fc" id="L62">    public int current_level = 0;</span>
+
+    public static final int CELLSIZE = 32; //8;
+    public static final int CELLHEIGHT = 32;
+
+    public static final int CELLAVG = 32;
+    public static final int TOPBAR = 0;
+<span class="fc" id="L69">    public static int WIDTH = 864; </span>
+<span class="fc" id="L70">    public static int HEIGHT = 640; </span>
+<span class="fc" id="L71">    public static final int BOARD_WIDTH = WIDTH/CELLSIZE;</span>
+    public static final int BOARD_HEIGHT = 20;
+
+    public static final int INITIAL_PARACHUTES = 1;
+
+    public static final int FPS = 30;
+
+    public String configPath;
+
+<span class="fc" id="L80">    public static Random random = new Random();</span>
+    public static JSONObject json_data;
+    public String layout;
+    public String background;
+    public String foreground_colour;
+    public String trees;
+    public static JSONArray all_levels;
+    // below is not HashMap&lt;String, String&gt; type
+    public JSONObject current_level_data;
+
+    // keep track of each tank
+<span class="fc" id="L91">    public ArrayList&lt;Player&gt; all_players = new ArrayList&lt;Player&gt;();</span>
+
+<span class="fc" id="L93">    public static char[] valid_players = {'A','B','C','D','E','F','G','H','I','0','1','2','3','4','5','6','7','8','9'};</span>
+    public static JSONObject colours;
+
+    public Player currentPlayer;
+<span class="fc" id="L97">    public int currentIndexPlayer = 0;</span>
+<span class="fc" id="L98">    public boolean projectile_fired = false;</span>
+    public Projectile new_proj;
+    public int proj_x;
+    public int proj_y;
+<span class="fc" id="L102">    public int stopper_value = 100000;</span>
+    public double t;
+<span class="fc" id="L104">    public static int radius = 6;</span>
+<span class="fc" id="L105">    public boolean explosion = false;</span>
+<span class="fc" id="L106">    public double t_explode = 0;</span>
+    public boolean explode;
+    public int[] positions;
+<span class="fc" id="L109">    public double explosion_time = (FPS/5);</span>
+<span class="fc" id="L110">    public double float_move = (60/FPS); // every frame, descends by 2 pixels translating to 60p per second.</span>
+	
+<span class="fc" id="L112">    public App() {</span>
+<span class="fc" id="L113">        this.configPath = &quot;config.json&quot;;</span>
+<span class="fc" id="L114">    }</span>
+
+    /**
+     * Initialise the setting of the window size.
+     */
+	@Override
+    public void settings() {
+<span class="fc" id="L121">        size(WIDTH, HEIGHT);</span>
+<span class="fc" id="L122">    }</span>
+
+    /**
+     * Load all resources such as images. Initialise the elements such as the player and map elements.
+     */
+	@Override
+    public void setup() {
+<span class="fc" id="L129">        frameRate(FPS);</span>
+
+<span class="nc" id="L131">        minim = new Minim(this);</span>
+<span class="nc" id="L132">        player = minim.loadFile(&quot;build/resources/main/Tanks/Vine-boom-sound-effect.mp3&quot;);</span>
+
+<span class="nc" id="L134">        minim2 = new Minim(this);</span>
+<span class="nc" id="L135">        player2 = minim2.loadFile(&quot;build/resources/main/Tanks/scream.wav&quot;);</span>
+        // font of displayed text // 3rd param is antialiasing, and PFont.list() shows available fonts.
+<span class="nc" id="L137">        f = createFont(&quot;Arial&quot;, 16, true);</span>
+<span class="nc" id="L138">        textFont(f, 16);</span>
+
+        //all_levels: is the array of details for each level
+        //current_level: the details of one element in the array all_levels (one level)
+        //layout, background etc. the specific detail in the current_level starting at level 1
+
+<span class="nc" id="L144">        json_data = loadJSONObject(&quot;config.json&quot;);        </span>
+<span class="nc" id="L145">        all_levels = json_data.getJSONArray(&quot;levels&quot;);</span>
+<span class="nc" id="L146">        current_level_data = all_levels.getJSONObject(current_index);</span>
+        
+        // ! details of the current level - if empty null is returned
+<span class="nc" id="L149">        layout = current_level_data.getString(&quot;layout&quot;);</span>
+<span class="nc" id="L150">        background = current_level_data.getString(&quot;background&quot;);</span>
+<span class="nc" id="L151">        foreground_colour = current_level_data.getString(&quot;foreground-colour&quot;);</span>
+<span class="nc" id="L152">        trees = current_level_data.getString(&quot;trees&quot;);</span>
+        
+        // load images //
+<span class="nc" id="L155">        size(WIDTH, HEIGHT);</span>
+<span class="nc" id="L156">        background_image = loadImage(&quot;build/resources/main/Tanks/&quot; + background);</span>
+<span class="nc" id="L157">        image(background_image, 0, 0);</span>
+
+        // colour map
+<span class="nc" id="L160">        colours = json_data.getJSONObject(&quot;player_colours&quot;);</span>
+
+
+
+        // Setting up from blocky level the first time
+<span class="nc" id="L165">        level = new DrawTerrain(layout, background, foreground_colour, trees);</span>
+<span class="nc" id="L166">        level.drawForeground(this);</span>
+
+        // for projectile to release from correct initial position 
+<span class="nc bnc" id="L169" title="All 2 branches missed.">        for (Player i : all_players) {</span>
+<span class="nc" id="L170">            i.y_pos = DrawTerrain.terrain_av2[i.x_pos];</span>
+<span class="nc" id="L171">        }</span>
+
+<span class="nc" id="L173">    }</span>
+
+    /**
+     * Receive key pressed signal from the keyboard.
+     */
+	@Override
+    public void keyPressed(KeyEvent event){
+        // powerups
+        // System.out.println(event);
+<span class="pc bpc" id="L182" title="1 of 2 branches missed.">        if (keyCode == 70) {</span>
+<span class="nc bnc" id="L183" title="All 5 branches missed.">            switch (this.currentPlayer.name) {</span>
+                case 'A':
+<span class="nc bnc" id="L185" title="All 2 branches missed.">                    if (A_score &gt; 10) {</span>
+<span class="nc" id="L186">                        A_score = A_score - 10;</span>
+<span class="nc" id="L187">                        this.currentPlayer.fuel = this.currentPlayer.fuel + 200;</span>
+                    }
+                    break;
+            
+                case 'B':
+<span class="nc bnc" id="L192" title="All 2 branches missed.">                    if (B_score &gt; 10) {</span>
+<span class="nc" id="L193">                        B_score = B_score - 10;</span>
+<span class="nc" id="L194">                        this.currentPlayer.fuel = this.currentPlayer.fuel + 200;</span>
+                    }
+                    break;
+
+                case 'C':
+<span class="nc bnc" id="L199" title="All 2 branches missed.">                    if (C_score &gt; 10) {</span>
+<span class="nc" id="L200">                        C_score = C_score - 10;</span>
+<span class="nc" id="L201">                        this.currentPlayer.fuel = this.currentPlayer.fuel + 200;</span>
+                    }
+                    break;
+
+                case 'D':
+<span class="nc bnc" id="L206" title="All 2 branches missed.">                    if (D_score &gt; 10) {</span>
+<span class="nc" id="L207">                        D_score = D_score - 10;</span>
+<span class="nc" id="L208">                        this.currentPlayer.fuel = this.currentPlayer.fuel + 200;</span>
+                    }
+
+                    break;
+            }
+        }
+<span class="pc bpc" id="L214" title="3 of 4 branches missed.">        if (keyCode == 82 &amp;&amp; !endgame) {</span>
+            // health +20 for -20 points
+<span class="nc bnc" id="L216" title="All 5 branches missed.">            switch (this.currentPlayer.name) {</span>
+                case 'A':
+<span class="nc bnc" id="L218" title="All 4 branches missed.">                    if (A_score &gt; 20 &amp;&amp; this.currentPlayer.health &lt; 100) {</span>
+<span class="nc" id="L219">                        A_score = A_score - 20;</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">                        if (this.currentPlayer.health &lt;= 80) {</span>
+<span class="nc" id="L221">                            this.currentPlayer.health = this.currentPlayer.health + 20;</span>
+                        } else {
+<span class="nc" id="L223">                            this.currentPlayer.health = 100;</span>
+                        }
+                    }
+                    break;
+            
+                case 'B':
+<span class="nc bnc" id="L229" title="All 4 branches missed.">                    if (B_score &gt; 20 &amp;&amp; this.currentPlayer.health &lt; 100) {</span>
+<span class="nc" id="L230">                        B_score = B_score - 20;</span>
+<span class="nc bnc" id="L231" title="All 2 branches missed.">                        if (this.currentPlayer.health &lt;= 80) {</span>
+<span class="nc" id="L232">                            this.currentPlayer.health = this.currentPlayer.health + 20;</span>
+                        } else {
+<span class="nc" id="L234">                            this.currentPlayer.health = 100;</span>
+                        }
+                    }
+                    break;
+
+                case 'C':
+<span class="nc bnc" id="L240" title="All 4 branches missed.">                    if (C_score &gt; 20 &amp;&amp; this.currentPlayer.health &lt; 100) {</span>
+<span class="nc" id="L241">                        C_score = C_score - 20;</span>
+<span class="nc bnc" id="L242" title="All 2 branches missed.">                        if (this.currentPlayer.health &lt;= 80) {</span>
+<span class="nc" id="L243">                            this.currentPlayer.health = this.currentPlayer.health + 20;</span>
+                        } else {
+<span class="nc" id="L245">                            this.currentPlayer.health = 100;</span>
+                        }
+                    }
+                    break;
+
+                case 'D':
+<span class="nc bnc" id="L251" title="All 4 branches missed.">                    if (D_score &gt; 20 &amp;&amp; this.currentPlayer.health &lt; 100) {</span>
+<span class="nc" id="L252">                        D_score = D_score - 20;</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">                        if (this.currentPlayer.health &lt;= 80) {</span>
+<span class="nc" id="L254">                            this.currentPlayer.health = this.currentPlayer.health + 20;</span>
+                        } else {
+<span class="nc" id="L256">                            this.currentPlayer.health = 100;</span>
+                        }
+                    }
+
+                    break;
+            }
+        }
+<span class="pc bpc" id="L263" title="3 of 4 branches missed.">        if (keyCode == 82 &amp;&amp; endgame) {</span>
+            // restart
+<span class="nc" id="L265">            animation = false;</span>
+<span class="nc" id="L266">            current_index = 0;</span>
+<span class="nc" id="L267">            A_score = 0;</span>
+<span class="nc" id="L268">            B_score = 0;</span>
+<span class="nc" id="L269">            C_score = 0;</span>
+<span class="nc" id="L270">            D_score = 0;</span>
+<span class="nc" id="L271">            A_exists = true;</span>
+<span class="nc" id="L272">            B_exists = true;</span>
+<span class="nc" id="L273">            C_exists = true;</span>
+<span class="nc" id="L274">            D_exists = true;</span>
+<span class="nc" id="L275">            endgame = false;</span>
+
+<span class="nc" id="L277">            current_index = 0;</span>
+<span class="nc" id="L278">            endgame = false;</span>
+<span class="nc" id="L279">            PApplet.main(&quot;Tanks.App&quot;);</span>
+
+
+        }
+<span class="pc bpc" id="L283" title="1 of 2 branches missed.">        if (keyCode == 87) {</span>
+            // W is hit
+<span class="nc" id="L285">            currentPlayer.changeTankPower(true);</span>
+        }
+<span class="pc bpc" id="L287" title="1 of 2 branches missed.">        if (keyCode == 83) {</span>
+            // S is hit
+<span class="nc" id="L289">            currentPlayer.changeTankPower(false);</span>
+        }
+
+<span class="pc bpc" id="L292" title="1 of 2 branches missed.">        if (keyCode == 40) {</span>
+            // up arrow- move turret moves left
+<span class="nc" id="L294">            currentPlayer.changeTurretAngle((float)3/FPS);</span>
+
+<span class="pc bpc" id="L296" title="1 of 2 branches missed.">        } if (keyCode == 38) {</span>
+            // down arrow - move turret right
+<span class="nc" id="L298">            currentPlayer.changeTurretAngle((float)-3/FPS);</span>
+
+<span class="pc bpc" id="L300" title="3 of 4 branches missed.">        } if (keyCode == 32 &amp;&amp; !projectile_fired) {</span>
+
+<span class="nc" id="L302">            projectile_fired = true;</span>
+<span class="nc" id="L303">            t = 0;</span>
+<span class="nc" id="L304">            new_proj = new Projectile(this, currentPlayer);</span>
+<span class="nc" id="L305">            shooter = currentPlayer;</span>
+<span class="nc" id="L306">            currentIndexPlayer = (currentIndexPlayer + 1) % all_players.size();</span>
+<span class="nc" id="L307">            DrawTerrain.wind = DrawTerrain.wind + ThreadLocalRandom.current().nextInt(-5, 5+1);</span>
+            // if (DrawTerrain.wind + wind_add &gt;= -35 &amp;&amp; DrawTerrain.wind + wind_add &lt;= 35)
+            //     DrawTerrain.wind = DrawTerrain.wind + wind_add;
+
+<span class="pc bpc" id="L311" title="3 of 4 branches missed.">        } if (keyCode == 39 &amp;&amp; !projectile_fired) {</span>
+            // move right - right key hit
+<span class="nc" id="L313">            currentPlayer.moveTank(false);</span>
+
+<span class="pc bpc" id="L315" title="2 of 4 branches missed.">        } if (keyCode == 37 &amp;&amp; !projectile_fired) {</span>
+            // move left - left key hit
+<span class="nc" id="L317">            currentPlayer.moveTank(true);</span>
+
+        }
+<span class="nc" id="L320">    }</span>
+
+    /**
+     * Receive key released signal from the keyboard.
+     */
+	@Override
+    public void keyReleased(){
+        
+<span class="nc" id="L328">    }</span>
+
+    @Override
+    public void mousePressed(MouseEvent e) {
+
+<span class="nc" id="L333">    }</span>
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+
+<span class="nc" id="L338">    }</span>
+
+    /**
+     * Draw all elements in the game by current frame.
+     */
+	@Override
+    public void draw() {
+        
+        // image must be placed here, so the projectile can be displayed and not covered by background image
+        // background image placed first.
+<span class="nc bnc" id="L348" title="All 2 branches missed.">        if (!animation) {</span>
+<span class="nc" id="L349">            image(background_image, 0, 0);</span>
+<span class="nc" id="L350">            level.continueDrawing(this);</span>
+
+            
+            // float down necessary tanks
+<span class="nc bnc" id="L354" title="All 2 branches missed.">            for (Player i : all_players) {</span>
+<span class="nc bnc" id="L355" title="All 2 branches missed.">                if (i.float_down == true) {</span>
+
+                    // check if next descent hits ground
+<span class="nc bnc" id="L358" title="All 2 branches missed.">                    if (i.y_pos &gt;= DrawTerrain.terrain_av2[i.x_pos]) {</span>
+<span class="nc" id="L359">                        i.y_pos = DrawTerrain.terrain_av2[i.x_pos];</span>
+<span class="nc" id="L360">                        i.parachutes --;</span>
+<span class="nc" id="L361">                        i.float_down = false;</span>
+                    } else {
+
+                        // load parachute
+<span class="nc bnc" id="L365" title="All 2 branches missed.">                        if (i.parachutes &gt; 0) {</span>
+<span class="nc" id="L366">                            PImage para = loadImage(&quot;build/resources/main/Tanks/parachute.png&quot;);</span>
+<span class="nc" id="L367">                            int psize = 26;</span>
+<span class="nc" id="L368">                            image(para, i.x_pos - psize/2, i.y_pos - 3*Player.tank_width/2, psize, psize);</span>
+<span class="nc" id="L369">                            i.y_pos += float_move;</span>
+<span class="nc" id="L370">                        } else {</span>
+                            // drop down faster
+<span class="nc" id="L372">                            i.y_pos += 2 * float_move;</span>
+<span class="nc" id="L373">                            i.health = i.health - (int)(2 * float_move);</span>
+                        }
+                    }
+                }
+
+                // remove players when health removed or below screen
+<span class="nc bnc" id="L379" title="All 4 branches missed.">                if (i.health &lt;= 0 || i.y_pos &gt;= HEIGHT) {</span>
+<span class="nc" id="L380">                    remove_at_index = all_players.indexOf(i);</span>
+                }
+
+<span class="nc" id="L383">            }</span>
+
+
+
+<span class="nc bnc" id="L387" title="All 2 branches missed.">            if (projectile_fired) {</span>
+                // use units of frames instead of seconds. i.e., each time draw() is called, frame increases by 1.
+<span class="nc" id="L389">                this.t ++;</span>
+            
+                // cycle between predict &lt;--&gt; draw until explosion
+<span class="nc" id="L392">                positions = new_proj.calculatePositions(t);</span>
+
+<span class="nc" id="L394">                explode = Projectile.toExplode(positions[0], positions[1]);</span>
+                
+<span class="nc bnc" id="L396" title="All 2 branches missed.">                if (explode) {</span>
+                    // explode the projectile
+<span class="nc" id="L398">                    projectile_fired = false;</span>
+<span class="nc" id="L399">                    explosion = true;</span>
+<span class="nc" id="L400">                    this.t = 0;</span>
+<span class="nc" id="L401">                    this.t_explode = 0;</span>
+                }
+
+<span class="nc" id="L404">                this.stroke(new_proj.colour[0], new_proj.colour[1], new_proj.colour[2]);</span>
+<span class="nc" id="L405">                this.fill(new_proj.colour[0], new_proj.colour[1], new_proj.colour[2]);</span>
+<span class="nc" id="L406">                this.ellipse(positions[0], positions[1], radius,radius);</span>
+                
+            } 
+            
+<span class="nc bnc" id="L410" title="All 2 branches missed.">            if (explosion) {</span>
+<span class="nc" id="L411">                player.rewind();</span>
+<span class="nc" id="L412">                player.play();</span>
+
+<span class="nc" id="L414">                int x_plode = positions[0];</span>
+<span class="nc" id="L415">                int y_plode = positions[1];</span>
+
+                // radius is percentage of FPS' elapsed
+                // make sure fraction has double numerator and denominator
+<span class="nc" id="L419">                int radius = (int)((this.t_explode/explosion_time) * 60); // change 60 for different sized explosion</span>
+
+                // the red, orange and yellow
+<span class="nc" id="L422">                stroke(255, 0, 0);</span>
+<span class="nc" id="L423">                fill(255, 0, 0);</span>
+<span class="nc" id="L424">                ellipse(x_plode, y_plode, radius, radius);</span>
+
+<span class="nc" id="L426">                stroke(255, 165, 0);</span>
+<span class="nc" id="L427">                fill(255, 165, 0);</span>
+<span class="nc" id="L428">                ellipse(x_plode, y_plode, (int)(radius*0.5), (int)(radius*0.5));</span>
+
+<span class="nc" id="L430">                stroke(255, 255, 0);</span>
+<span class="nc" id="L431">                fill(255, 255, 0);</span>
+<span class="nc" id="L432">                ellipse(x_plode, y_plode, (int)(radius*0.2), (int)(radius*0.2));</span>
+
+                // increment frame
+<span class="nc" id="L435">                this.t_explode = this.t_explode + 1;</span>
+
+<span class="nc bnc" id="L437" title="All 2 branches missed.">                if (this.t_explode &gt;= explosion_time) {</span>
+
+                    // remove land
+
+                    // from further pixel to closest pixel in circle of damage (left to right), calculate the 
+                    // hieght of the cord from the corresponding x value and the two y-values. Then, the new
+                    // height is the sum of the land above and below this chord.
+
+                    // 1. iterate each pixel //x_plode and y_plode represent coords of the circle's centre
+                    // 2. calculate chord
+                    // 3. find new height
+                    // 4. apply new height in terrain_av2
+
+<span class="nc bnc" id="L450" title="All 2 branches missed.">                    for (int pixel=x_plode-radius; pixel&lt;=x_plode+radius; pixel++) {</span>
+                        // find height of chord at x=pixel. Traverse left to right the diameter
+<span class="nc bnc" id="L452" title="All 4 branches missed.">                        if (pixel &lt; 0 || pixel &gt; App.WIDTH) {</span>
+<span class="nc" id="L453">                            continue;</span>
+                        }
+<span class="nc" id="L455">                        int dist_from_radius = x_plode - pixel;</span>
+<span class="nc" id="L456">                        double y = Math.sqrt(Math.pow(radius, 2) - Math.pow(dist_from_radius, 2));// this is the positive solution</span>
+
+<span class="nc" id="L458">                        double height_chord = 2 * y;</span>
+
+<span class="nc bnc" id="L460" title="All 2 branches missed.">                        if (DrawTerrain.terrain_av2[pixel] &lt; y_plode - y) {</span>
+                            // land is fully above the circle of interest at the chord x
+<span class="nc" id="L462">                            DrawTerrain.terrain_av2[pixel] = DrawTerrain.terrain_av2[pixel] + (int)height_chord;</span>
+
+
+<span class="nc bnc" id="L465" title="All 4 branches missed.">                        } else if (DrawTerrain.terrain_av2[pixel] &gt; y_plode - y &amp;&amp; DrawTerrain.terrain_av2[pixel] &lt; y_plode + y) {</span>
+                            // land is inside the circle of interest at chord x
+<span class="nc" id="L467">                            int centre_from_pixel = DrawTerrain.terrain_av2[pixel] - y_plode;</span>
+<span class="nc" id="L468">                            int remove_part =  (int)y - centre_from_pixel;</span>
+
+<span class="nc" id="L470">                            DrawTerrain.terrain_av2[pixel] = DrawTerrain.terrain_av2[pixel] + remove_part;</span>
+
+                        } else {
+                            // land is below chord and can be ignored
+                            continue;
+                        }
+
+                    }
+
+                    // for projectile to release from correct initial position 
+<span class="nc bnc" id="L480" title="All 2 branches missed.">                    for (Player i : all_players) {</span>
+                        // check if y of tank is equal to y of land. if not, float down = true and float to there
+<span class="nc bnc" id="L482" title="All 2 branches missed.">                        if (i.y_pos != DrawTerrain.terrain_av2[i.x_pos]) {</span>
+<span class="nc" id="L483">                            i.float_down = true;</span>
+                        }
+
+                        // deal damage from explosion
+<span class="nc" id="L487">                        int dist = Math.abs(i.x_pos - x_plode);</span>
+<span class="nc bnc" id="L488" title="All 2 branches missed.">                        if (dist &lt;= 30) {</span>
+<span class="nc" id="L489">                            i.health = i.health - (-2*dist + 60);</span>
+                            
+                            // tally points
+<span class="nc bnc" id="L492" title="All 2 branches missed.">                            if (shooter.name != i.name) {</span>
+<span class="nc bnc" id="L493" title="All 5 branches missed.">                                switch (shooter.name) {</span>
+                                    case 'A':
+<span class="nc" id="L495">                                        A_score = A_score + (int)(-2*dist + 60);</span>
+<span class="nc" id="L496">                                        break;</span>
+
+                                    case 'B':
+<span class="nc" id="L499">                                        B_score = B_score + (int)(-2*dist + 60);</span>
+<span class="nc" id="L500">                                        break;</span>
+                                    
+                                    case 'C':
+<span class="nc" id="L503">                                        C_score = C_score + (int)(-2*dist + 60);</span>
+<span class="nc" id="L504">                                        break;</span>
+
+                                    case 'D':
+<span class="nc" id="L507">                                        D_score = D_score + (int)(-2*dist + 60);</span>
+                                        break;
+                                }
+                            }
+
+
+                        }                        
+<span class="nc" id="L514">                    }</span>
+
+<span class="nc" id="L516">                    explosion = false;</span>
+                }
+            }
+
+            // draw terrain //
+
+<span class="nc bnc" id="L522" title="All 2 branches missed.">            if (remove_at_index != -10) {</span>
+
+<span class="nc" id="L524">                all_players.remove(remove_at_index);</span>
+<span class="nc" id="L525">                player2.rewind();</span>
+<span class="nc" id="L526">                player2.play();</span>
+
+                // adjust current player
+<span class="nc bnc" id="L529" title="All 2 branches missed.">                if (remove_at_index &lt; currentIndexPlayer) {</span>
+<span class="nc" id="L530">                    currentIndexPlayer --;</span>
+                }
+<span class="nc bnc" id="L532" title="All 2 branches missed.">                if (remove_at_index == currentIndexPlayer) {</span>
+<span class="nc" id="L533">                    currentIndexPlayer = (currentIndexPlayer) % all_players.size();</span>
+                }
+
+<span class="nc" id="L536">                remove_at_index = -10;</span>
+
+                // endgame - move to next level, display winner etc.
+<span class="nc bnc" id="L539" title="All 2 branches missed.">                if (all_players.size() == 1) {</span>
+
+                    // display winner or smth, move to next level
+<span class="nc" id="L542">                    current_index ++;</span>
+<span class="nc bnc" id="L543" title="All 2 branches missed.">                    if (current_index &lt; 3) {</span>
+<span class="nc" id="L544">                        PApplet.main(&quot;Tanks.App&quot;);</span>
+                    } else {
+                        // TODO: endgame
+<span class="nc" id="L547">                        animation = true;</span>
+<span class="nc" id="L548">                        t_ani = 0;</span>
+                    }
+                }
+            }
+
+<span class="nc" id="L553">            currentPlayer = all_players.get(currentIndexPlayer);</span>
+
+<span class="nc" id="L555">            this.noStroke();</span>
+
+        } else {
+            // roll the credits
+<span class="nc" id="L559">            t_ani ++;</span>
+<span class="nc" id="L560">            int largest_score = A_score;</span>
+<span class="nc" id="L561">            char winner = 'A';</span>
+<span class="nc" id="L562">            int[] colour = DrawTerrain.colourA;</span>
+            
+<span class="nc bnc" id="L564" title="All 2 branches missed.">            if (B_score &gt; largest_score) {</span>
+<span class="nc" id="L565">                winner = 'B';</span>
+<span class="nc" id="L566">                largest_score = B_score;</span>
+<span class="nc" id="L567">                colour = DrawTerrain.colourB;</span>
+
+            }
+<span class="nc bnc" id="L570" title="All 2 branches missed.">            if (C_score &gt; largest_score) {</span>
+<span class="nc" id="L571">                winner = 'C';</span>
+<span class="nc" id="L572">                largest_score = C_score;</span>
+<span class="nc" id="L573">                colour = DrawTerrain.colourC;</span>
+
+            }
+<span class="nc bnc" id="L576" title="All 2 branches missed.">            if (D_score &gt; largest_score) {</span>
+<span class="nc" id="L577">                winner = 'D';</span>
+<span class="nc" id="L578">                largest_score = D_score;</span>
+<span class="nc" id="L579">                colour = DrawTerrain.colourD;</span>
+
+            }
+
+<span class="nc" id="L583">            f = createFont(&quot;Arial&quot;, 30, true);</span>
+<span class="nc" id="L584">            textFont(f, 30);</span>
+<span class="nc" id="L585">            fill(colour[0], colour[1], colour[2]);</span>
+
+<span class="nc" id="L587">            String msg = &quot;Player &quot; + Character.toString(winner) + &quot; wins!&quot;;</span>
+<span class="nc" id="L588">            text(msg, App.WIDTH/3 - 30, 140);</span>
+
+<span class="nc" id="L590">            stroke(0, 0, 0);</span>
+<span class="nc" id="L591">            strokeWeight(6);</span>
+<span class="nc" id="L592">            fill(colour[0], colour[1], colour[2], (float)1);</span>
+
+<span class="nc" id="L594">            rect(App.WIDTH/3 - 50, 160, 400, 240);</span>
+
+<span class="nc" id="L596">            line(App.WIDTH/3 - 50, 220, App.WIDTH/3 - 50 + 400, 220);</span>
+<span class="nc" id="L597">            fill(0, 0, 0);</span>
+<span class="nc" id="L598">            text(&quot;Final Scores&quot;, App.WIDTH/3 - 30, 200);</span>
+
+            // display first, then second etc. 0.7s delays
+<span class="nc bnc" id="L601" title="All 2 branches missed.">            if (t_ani &gt; FPS * 0.7) {</span>
+<span class="nc" id="L602">                fill(DrawTerrain.colourA[0], DrawTerrain.colourA[1], DrawTerrain.colourA[2]);</span>
+<span class="nc" id="L603">                text(&quot;Player A&quot;, App.WIDTH/3 - 30, 260);</span>
+
+                    
+<span class="nc" id="L606">                fill(0, 0, 0);</span>
+<span class="nc" id="L607">                text(String.valueOf(A_score), App.WIDTH/3 + 300, 260);</span>
+            }
+
+<span class="nc bnc" id="L610" title="All 2 branches missed.">            if (t_ani &gt; 2 * FPS * 0.7) {</span>
+<span class="nc" id="L611">                fill(DrawTerrain.colourB[0], DrawTerrain.colourB[1], DrawTerrain.colourB[2]);</span>
+<span class="nc" id="L612">                text(&quot;Player B&quot;, App.WIDTH/3 - 30, 300);</span>
+
+<span class="nc" id="L614">                fill(0, 0, 0);</span>
+<span class="nc" id="L615">                text(String.valueOf(B_score), App.WIDTH/3 + 300, 300);</span>
+            }
+
+<span class="nc bnc" id="L618" title="All 2 branches missed.">            if (t_ani &gt; 3 * FPS * 0.7) {</span>
+<span class="nc" id="L619">                fill(DrawTerrain.colourC[0], DrawTerrain.colourC[1], DrawTerrain.colourC[2]);</span>
+<span class="nc" id="L620">                text(&quot;Player C&quot;, App.WIDTH/3 - 30, 340);</span>
+
+<span class="nc" id="L622">                fill(0, 0, 0);</span>
+<span class="nc" id="L623">                text(String.valueOf(C_score), App.WIDTH/3 + 300, 340);</span>
+            }
+
+<span class="nc bnc" id="L626" title="All 2 branches missed.">            if (t_ani &gt; 4 * FPS * 0.7) {</span>
+<span class="nc" id="L627">                fill(DrawTerrain.colourD[0], DrawTerrain.colourD[1], DrawTerrain.colourD[2]);</span>
+<span class="nc" id="L628">                text(&quot;Player D&quot;, App.WIDTH/3 - 30, 380);</span>
+
+<span class="nc" id="L630">                fill(0, 0, 0);</span>
+<span class="nc" id="L631">                text(String.valueOf(D_score), App.WIDTH/3 + 300, 380);</span>
+<span class="nc" id="L632">                endgame = true;</span>
+            }
+
+        }
+
+<span class="nc" id="L637">    }</span>
+
+    public static void main(String[] args) {
+
+
+<span class="nc" id="L642">        current_index = 0;</span>
+<span class="nc" id="L643">        PApplet.main(&quot;Tanks.App&quot;);</span>
+<span class="nc" id="L644">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
